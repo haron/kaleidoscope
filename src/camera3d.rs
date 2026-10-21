@@ -41,9 +41,10 @@ impl CameraState {
     pub fn switch_rotation(&mut self) {
         self.rotation = !self.rotation;
     }
-    pub fn rotate(&mut self) {
+    // angle_step is per frame at the camera's 30 fps, the rate rendering used to be tied to
+    pub fn rotate(&mut self, dt: f32) {
         if self.rotation {
-            self.angle += self.angle_step;
+            self.angle += self.angle_step * dt * 30.;
         }
         if self.angle > 2.0 * PI {
             self.angle -= 2.0 * PI;

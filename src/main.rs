@@ -4,11 +4,13 @@ use lazy_static::lazy_static;
 use macroquad::prelude::*;
 use macroquad::texture::Texture2D;
 use std::fs;
+use std::sync::mpsc::{self, TryRecvError, TrySendError};
+use std::thread;
 use v4l::buffer::Type;
 use v4l::control::{Control, Value};
 use v4l::io::mmap::Stream;
 use v4l::io::traits::CaptureStream;
-use v4l::v4l_sys::V4L2_CID_SATURATION;
+use v4l::v4l_sys::{V4L2_CID_EXPOSURE_AUTO_PRIORITY, V4L2_CID_SATURATION};
 use v4l::video::Capture;
 use v4l::Device;
 use v4l::FourCC;
@@ -47,6 +49,11 @@ fn window_conf() -> Conf {
         fullscreen: settings.fullscreen,
         window_height: settings.window_height,
         window_width: settings.window_width,
+        // Without vsync the render loop spins a core the capture thread needs
+        platform: miniquad::conf::Platform {
+            swap_interval: Some(1),
+            ..Default::default()
+        },
         ..Default::default()
     }
 }
@@ -81,21 +88,42 @@ async fn main() {
         value: Value::Integer(settings.webcamera.saturation),
     })
     .expect("Failed to set saturation");
+    // Otherwise auto exposure drops the camera to ~15 fps in a dim room
+    dev.set_control(Control {
+        id: V4L2_CID_EXPOSURE_AUTO_PRIORITY,
+        value: Value::Boolean(false),
+    })
+    .expect("Failed to disable dynamic framerate");
     let mut fmt = dev.format().expect("Failed to read format");
     fmt.width = settings.webcamera.width;
     fmt.height = settings.webcamera.height;
-    fmt.fourcc = FourCC::new(b"YVUV");
+    // MJPG: 30 fps, the camera gives YUYV only 25 fps at 640x480
+    fmt.fourcc = FourCC::new(b"MJPG");
     println!("Format to set:\n{}", fmt);
     let fmt = dev.set_format(&fmt).expect("Failed to write format");
     println!("Format in use:\n{}", fmt);
-    let decoder: Box<dyn Decoder> = if fmt.fourcc == FourCC::new(b"MJPG") {
-        Box::new(MjpegDecoder {})
-    } else {
-        Box::new(YuyvDecoder {})
-    };
-    let mut stream = Stream::with_buffers(&dev, Type::VideoCapture, BUFFER_COUNT)
-        .expect("Failed to create buffer stream");
-    let mut image = Image::gen_image_color(fmt.width as u16, fmt.height as u16, WHITE);
+    let (width, height) = (fmt.width as u16, fmt.height as u16);
+    // Capture and decode off the render thread, so rendering runs at vsync, not camera rate
+    let (frames_tx, frames) = mpsc::sync_channel::<Vec<u8>>(1);
+    thread::spawn(move || {
+        let decoder: Box<dyn Decoder> = if fmt.fourcc == FourCC::new(b"MJPG") {
+            Box::new(MjpegDecoder {})
+        } else {
+            Box::new(YuyvDecoder {})
+        };
+        let mut stream = Stream::with_buffers(&dev, Type::VideoCapture, BUFFER_COUNT)
+            .expect("Failed to create buffer stream");
+        loop {
+            let (buf, _meta) = stream.next().expect("Camera lost");
+            let mut rgba = vec![0; width as usize * height as usize * 4];
+            decoder.decode(&mut rgba, buf);
+            // Full means the renderer hasn't taken the previous frame yet: drop this one
+            if let Err(TrySendError::Disconnected(_)) = frames_tx.try_send(rgba) {
+                break;
+            }
+        }
+    });
+    let mut image = Image::gen_image_color(width, height, WHITE);
     let texture = Texture2D::from_image(&image);
 
     let fragment_shaders: Vec<_> = glob("shaders/*.fs")
@@ -165,9 +193,15 @@ async fn main() {
         //
         // Webcam
         //
-        // On unplug, exit and let systemd restart us into the waiting loop
-        let (buf, _meta) = stream.next().expect("Camera lost");
-        decoder.decode(&mut image, buf);
+        // On unplug the capture thread dies: exit and let systemd restart us into the waiting loop
+        match frames.try_recv() {
+            Ok(rgba) => {
+                image.bytes = rgba;
+                texture.update(&image);
+            }
+            Err(TryRecvError::Empty) => (),
+            Err(TryRecvError::Disconnected) => panic!("Camera lost"),
+        }
 
         //
         // Input
@@ -236,12 +270,11 @@ async fn main() {
         //
         // GUI
         //
-        texture.update(&image);
         // Current time (since last midnight, in milliseconds)
         let material = state.get_material();
         state.next_phase();
         material.set_uniform("phase", state.phase);
-        state.camera.rotate();
+        state.camera.rotate(get_frame_time());
         camera.up = angle2vec(state.camera.angle);
         camera.position = vec3(0., 0., state.camera.height);
         clear_background(BLACK);
