@@ -24,6 +24,7 @@ cargo run
 ```
 ## How to deploy?
 Copy `.env.example` to `.env` and set `HOST`. `make provision` once turns the box into a kiosk (boots into the app, restarts it on failure), then `make deploy`.
+`make pad` flashes the 3 key + knob macropad (`macropad.yaml`): keys switch mesh, vertex shader, fragment shader; the knob zooms.
 ## Standard controls
 ### Keyboard controls
 
@@ -57,7 +58,7 @@ Change camera height
 | Col1       | Col2               | Col3                 |
 |------------|--------------------|----------------------|
 | Next mesh  | Next vertex shader | Next fragment shader |
-| default.vs | inner_rotation.vs  | quake.vs             |
+| default.vs | inner_rotation.vs  |                      |
 | default.fs | test.fs            | rgb_corners.fs       |
 | corners.fs | time.fs            | rainbow.fs           |
 

@@ -29,3 +29,7 @@ stop:
 
 reboot:
 	ssh $(HOST) reboot
+
+# one-off: the mapping lives in the pad's flash
+pad: upload
+	ssh $(HOST) '/root/.cargo/bin/ch57x-keyboard-tool --version || /root/.cargo/bin/cargo install --locked ch57x-keyboard-tool; cd /opt/kaleidoscope && /root/.cargo/bin/ch57x-keyboard-tool validate macropad.yaml && /root/.cargo/bin/ch57x-keyboard-tool upload macropad.yaml'

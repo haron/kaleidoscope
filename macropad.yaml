@@ -1,0 +1,14 @@
+# 3 keys + 1 knob pad (1189:8890), flashed with `make pad`; keys match src/controls/full.rs
+model: ch57x-2
+orientation: upsidedown # knob on the left
+rows: 1
+columns: 3
+knobs: 1
+layers:
+  - buttons:
+      - ["m", "up", "right"] # next mesh, next vertex shader, next fragment shader
+    knobs:
+      # wheel instead of PageUp/PageDown: full.rs polls those with is_key_down and misses quick detents
+      - ccw: "wheeldown"
+        press: "f13" # no empty action allowed; the app ignores it
+        cw: "wheelup"
