@@ -13,6 +13,8 @@ pub enum Command {
     NextMesh,
     CameraUp,
     CameraDown,
+    // Height change in knob detents, fractional for smooth zooms
+    CameraShift(f32),
     CameraReset,
     SwitchRotation,
     NextFragmentShader,

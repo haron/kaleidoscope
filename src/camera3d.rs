@@ -15,10 +15,14 @@ pub struct CameraState {
 
 impl CameraState {
     pub fn increase_height(&mut self) {
-        self.height = f32::min(self.max_height, self.height + self.height_step);
+        self.shift_height(1.);
     }
     pub fn decrease_height(&mut self) {
-        self.height = f32::max(self.min_height, self.height - self.height_step);
+        self.shift_height(-1.);
+    }
+    pub fn shift_height(&mut self, detents: f32) {
+        self.height =
+            (self.height + detents * self.height_step).clamp(self.min_height, self.max_height);
     }
     pub fn reset_heigth(&mut self) {
         self.height = self.start_height;

@@ -25,7 +25,7 @@ use webcam::controls::{Command, KeyboardType};
 use webcam::decoder::*;
 use webcam::material::Shader;
 use webcam::meshes::{get_hexagons, get_triangles};
-use webcam::state::State;
+use webcam::state::{Fade, State};
 
 const BUFFER_COUNT: u32 = 4;
 
@@ -189,6 +189,7 @@ async fn main() {
         settings.autopilot.period,
         get_time(),
     );
+    let mut fade_rt: Option<RenderTarget> = None;
     loop {
         //
         // Webcam
@@ -210,6 +211,7 @@ async fn main() {
         if command.is_some() {
             autopilot.touched(get_time());
         }
+        let (old_key, old_material) = (state.effect_key(), state.get_material());
         match command.or_else(|| autopilot.next(get_time())) {
             Some(Command::Quit) => break,
             Some(Command::SwitchRotation) => state.camera.switch_rotation(),
@@ -233,6 +235,9 @@ async fn main() {
             }
             Some(Command::CameraUp) => {
                 state.increase_height();
+            }
+            Some(Command::CameraShift(detents)) => {
+                state.camera.shift_height(detents);
             }
             Some(Command::IncreaseAngleSpeed) => {
                 state.camera.increase_angle_speed();
@@ -266,6 +271,14 @@ async fn main() {
             }
             _ => (),
         }
+        if settings.crossfade > 0. && state.effect_key() != old_key {
+            state.fade = Some(Fade {
+                material: old_material,
+                mesh_ind: old_key.2,
+                start: get_time(),
+                duration: settings.crossfade,
+            });
+        }
 
         //
         // GUI
@@ -282,6 +295,51 @@ async fn main() {
         gl_use_material(&state.get_material());
         state.get_mesh().iter().for_each(draw_mesh);
         gl_use_default_material();
+
+        //
+        // Crossfade: render the previous effect offscreen and lay it over with fading alpha
+        //
+        if let Some(fade) = &state.fade {
+            let alpha = fade.alpha(get_time());
+            let size = vec2(screen_width(), screen_height());
+            if fade_rt.as_ref().is_some_and(|rt| rt.texture.size() != size) {
+                fade_rt = None;
+            }
+            let rt = fade_rt.get_or_insert_with(|| {
+                let rt = render_target(size.x as u32, size.y as u32);
+                rt.texture.set_filter(FilterMode::Linear);
+                rt
+            });
+            set_camera(&Camera3D {
+                position: camera.position,
+                up: camera.up,
+                target: camera.target,
+                render_target: Some(rt.clone()),
+                ..Default::default()
+            });
+            clear_background(BLACK);
+            fade.material.set_uniform("phase", state.phase);
+            gl_use_material(&fade.material);
+            state.figure.meshes[fade.mesh_ind]
+                .iter()
+                .for_each(draw_mesh);
+            gl_use_default_material();
+            set_default_camera();
+            draw_texture_ex(
+                &rt.texture,
+                0.,
+                0.,
+                Color::new(1., 1., 1., alpha),
+                DrawTextureParams {
+                    dest_size: Some(size),
+                    flip_y: true,
+                    ..Default::default()
+                },
+            );
+            if alpha <= 0. {
+                state.fade = None;
+            }
+        }
 
         next_frame().await
     }

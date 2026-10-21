@@ -6,6 +6,21 @@ use crate::camera3d::CameraState;
 use crate::material::{Shader, Style};
 use crate::meshes::Figure;
 
+/// The previous effect, kept animating while it fades out over the new one
+pub struct Fade {
+    pub material: Material,
+    pub mesh_ind: usize,
+    pub start: f64,
+    pub duration: f64,
+}
+
+impl Fade {
+    pub fn alpha(&self, now: f64) -> f32 {
+        let t = ((now - self.start) / self.duration).min(1.) as f32;
+        1. - t * t * (3. - 2. * t)
+    }
+}
+
 pub struct State {
     pub style: Style,
     pub figure: Figure,
@@ -16,6 +31,7 @@ pub struct State {
     pub cycle_mult: f32,
     pub phase: f32,
     pub dt: DateTime<Utc>,
+    pub fade: Option<Fade>,
 }
 
 impl State {
@@ -24,6 +40,13 @@ impl State {
     }
     pub fn get_mesh(&self) -> &Vec<Mesh> {
         self.figure.get_mesh()
+    }
+    pub fn effect_key(&self) -> (usize, usize, usize) {
+        (
+            self.style.v_shader_ind,
+            self.style.f_shader_ind,
+            self.figure.mesh_ind,
+        )
     }
     pub fn increase_height(&mut self) {
         self.camera.increase_height();
@@ -74,6 +97,7 @@ impl State {
             cycle_mult,
             phase: 0.,
             dt: Utc::now(),
+            fade: None,
         }
     }
 }
