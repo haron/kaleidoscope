@@ -2,3 +2,6 @@
 *~
 *#
 /config/local.json
+/.env
+!/.env.example
+!/.rsync-filter

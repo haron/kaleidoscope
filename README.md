@@ -22,6 +22,8 @@ For example, if you want to run the application in fullscreen mode and use our m
 ```bash
 cargo run
 ```
+## How to deploy?
+Copy `.env.example` to `.env` and set `HOST`. `make provision` once turns the box into a kiosk (boots into the app, restarts it on failure), then `make deploy`.
 ## Standard controls
 ### Keyboard controls
 

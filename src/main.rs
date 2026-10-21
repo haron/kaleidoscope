@@ -58,7 +58,21 @@ fn angle2vec(angle: f32) -> Vec3 {
 async fn main() {
     let settings = SETTINGS.clone();
 
-    let dev = Device::new(settings.webcamera.device_id).expect("Failed to open device");
+    // In kiosk mode the camera may be plugged in after boot
+    let dev = loop {
+        match Device::new(settings.webcamera.device_id) {
+            Ok(dev) => break dev,
+            Err(e) => {
+                clear_background(BLACK);
+                let msg = format!(
+                    "Waiting for camera /dev/video{}: {}",
+                    settings.webcamera.device_id, e
+                );
+                draw_text(&msg, 20., 40., 30., WHITE);
+                next_frame().await
+            }
+        }
+    };
     let mut fmt = dev.format().expect("Failed to read format");
     fmt.width = settings.webcamera.width;
     fmt.height = settings.webcamera.height;
@@ -138,7 +152,8 @@ async fn main() {
         //
         // Webcam
         //
-        let (buf, _meta) = stream.next().unwrap();
+        // On unplug, exit and let systemd restart us into the waiting loop
+        let (buf, _meta) = stream.next().expect("Camera lost");
         decoder.decode(&mut image, buf);
 
         //
