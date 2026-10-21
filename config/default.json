@@ -1,20 +1,29 @@
-{"keyboard": "full",
- "webcamera": {"width": 640, "height": 480, "device_id": 0},
- "camera3d": {"min_height": -7.0,
-	      "max_height": 0.0,
-	      "start_height": -5.0,
-	      "step": 0.05,
-	      "angle_step": 0.01,
-	      "max_angle_step": 0.1,
-	      "angle_speed_change_step": 0.001
-	     },
- "mesh": {"triangles": {"levels": 3},
-	  "hexagons": {"levels": 1}
-	 },
- "default_cycle": 30000,
- "max_cycle": 300000,
- "cycle_mult": 1.2,
- "fullscreen": false,
- "window_height": 600,
- "window_width": 800
+{
+  "keyboard": "full",
+  "webcamera": {
+    "width": 640,
+    "height": 480,
+    "device_id": 0,
+    "saturation": 110
+  },
+  "camera3d": {
+    "min_height": -7.0,
+    "max_height": 0.0,
+    "start_height": -5.0,
+    "step": 0.05,
+    "angle_step": 0.01,
+    "max_angle_step": 0.1,
+    "angle_speed_change_step": 0.001
+  },
+  "autopilot": { "idle": 10, "period": 5 },
+  "mesh": {
+    "triangles": { "levels": 3 },
+    "hexagons": { "levels": 1 }
+  },
+  "default_cycle": 30000,
+  "max_cycle": 300000,
+  "cycle_mult": 1.2,
+  "fullscreen": false,
+  "window_height": 600,
+  "window_width": 800
 }

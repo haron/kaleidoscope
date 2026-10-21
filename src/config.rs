@@ -7,6 +7,7 @@ pub struct WebCameraSettings {
     pub width: u32,
     pub height: u32,
     pub device_id: usize,
+    pub saturation: i64,
 }
 
 #[derive(Deserialize, Clone, Debug, Default)]
@@ -18,6 +19,12 @@ pub struct Camera3DSettings {
     pub angle_step: f32,
     pub max_angle_step: f32,
     pub angle_speed_change_step: f32,
+}
+
+#[derive(Deserialize, Clone, Debug, Default)]
+pub struct AutopilotSettings {
+    pub idle: f64,
+    pub period: f64,
 }
 
 #[derive(Deserialize, Clone, Debug, Default)]
@@ -41,6 +48,7 @@ pub struct Settings {
     pub keyboard: KeyboardType,
     pub webcamera: WebCameraSettings,
     pub camera3d: Camera3DSettings,
+    pub autopilot: AutopilotSettings,
     pub mesh: Mesh,
     pub default_cycle: u32,
     pub max_cycle: u32,

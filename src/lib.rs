@@ -1,3 +1,4 @@
+pub mod autopilot;
 pub mod camera3d;
 pub mod config;
 pub mod controls;

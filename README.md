@@ -23,8 +23,9 @@ For example, if you want to run the application in fullscreen mode and use our m
 cargo run
 ```
 ## How to deploy?
-Copy `.env.example` to `.env` and set `HOST`; `SATURATION` there tunes the camera colors. `make provision` once turns the box into a kiosk (boots into the app, restarts it on failure), then `make deploy`.
+Copy `.env.example` to `.env` and set `HOST`. `make provision` once turns the box into a kiosk (boots into the app, restarts it on failure), then `make deploy`.
 `make pad` flashes the 3 key + knob macropad (`macropad.yaml`): keys switch mesh, vertex shader, fragment shader; the knob zooms.
+After `autopilot.idle` seconds without input, the app presses random keys/knob every `autopilot.period` seconds until touched.
 ## Standard controls
 ### Keyboard controls
 

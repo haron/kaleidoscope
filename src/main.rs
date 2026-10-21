@@ -16,6 +16,7 @@ use webcam::controls::full::FullKeyboard;
 use webcam::controls::mini::MiniKeyboard;
 use webcam::controls::Keyboard;
 
+use webcam::autopilot::Autopilot;
 use webcam::camera3d::CameraState;
 use webcam::config::Settings;
 use webcam::controls::{Command, KeyboardType};
@@ -75,15 +76,11 @@ async fn main() {
             }
         }
     };
-    // Set here, not in the unit: the camera may be (re)plugged after boot
-    if let Ok(saturation) = std::env::var("SATURATION") {
-        let value = saturation.parse().expect("SATURATION must be an integer");
-        dev.set_control(Control {
-            id: V4L2_CID_SATURATION,
-            value: Value::Integer(value),
-        })
-        .expect("Failed to set saturation");
-    }
+    dev.set_control(Control {
+        id: V4L2_CID_SATURATION,
+        value: Value::Integer(settings.webcamera.saturation),
+    })
+    .expect("Failed to set saturation");
     let mut fmt = dev.format().expect("Failed to read format");
     fmt.width = settings.webcamera.width;
     fmt.height = settings.webcamera.height;
@@ -159,6 +156,11 @@ async fn main() {
         KeyboardType::Full => Box::new(FullKeyboard {}),
         KeyboardType::Mini => Box::new(MiniKeyboard {}),
     };
+    let mut autopilot = Autopilot::new(
+        settings.autopilot.idle,
+        settings.autopilot.period,
+        get_time(),
+    );
     loop {
         //
         // Webcam
@@ -170,7 +172,11 @@ async fn main() {
         //
         // Input
         //
-        match keyboard.process_input() {
+        let command = keyboard.process_input();
+        if command.is_some() {
+            autopilot.touched(get_time());
+        }
+        match command.or_else(|| autopilot.next(get_time())) {
             Some(Command::Quit) => break,
             Some(Command::SwitchRotation) => state.camera.switch_rotation(),
             Some(Command::NextMesh) => {
