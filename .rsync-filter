@@ -4,4 +4,4 @@
 - /config/local.json*
 - /Dockerfile*
 - .DS_Store
-- /.env*
+- /.env.example

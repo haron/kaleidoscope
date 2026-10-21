@@ -5,8 +5,10 @@ use macroquad::prelude::*;
 use macroquad::texture::Texture2D;
 use std::fs;
 use v4l::buffer::Type;
+use v4l::control::{Control, Value};
 use v4l::io::mmap::Stream;
 use v4l::io::traits::CaptureStream;
+use v4l::v4l_sys::V4L2_CID_SATURATION;
 use v4l::video::Capture;
 use v4l::Device;
 use v4l::FourCC;
@@ -73,6 +75,15 @@ async fn main() {
             }
         }
     };
+    // Set here, not in the unit: the camera may be (re)plugged after boot
+    if let Ok(saturation) = std::env::var("SATURATION") {
+        let value = saturation.parse().expect("SATURATION must be an integer");
+        dev.set_control(Control {
+            id: V4L2_CID_SATURATION,
+            value: Value::Integer(value),
+        })
+        .expect("Failed to set saturation");
+    }
     let mut fmt = dev.format().expect("Failed to read format");
     fmt.width = settings.webcamera.width;
     fmt.height = settings.webcamera.height;

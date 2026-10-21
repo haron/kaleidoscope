@@ -18,6 +18,7 @@ UtmpMode=user
 # logind hands rootless Xorg the GPU only if the session's VT is the active one
 ExecStartPre=+/usr/bin/chvt 7
 WorkingDirectory=/opt/kaleidoscope
+EnvironmentFile=/opt/kaleidoscope/.env
 # matchbox makes the window fullscreen; -s 0 -dpms stops X from blanking the screen
 ExecStart=/usr/bin/xinit /bin/sh -c 'matchbox-window-manager -use_titlebar no & exec target/release/webcam' -- :0 vt7 -keeptty -nocursor -s 0 -dpms -nolisten tcp
 Restart=always
